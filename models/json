@@ -1,0 +1,43 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "@protected": true,
+    "type": "@type",
+    "schema": "https://schema.org/",
+    "DrivingLicenseCredential": {
+      "@id": "https://marshmelloweranda.github.io/inji-config/contexts/driving-license-context.json#DrivingLicenseCredential"
+    },
+    "sub": "schema:identifier",
+    "application_id": "schema:identifier",
+    "medical_certificate_id": "schema:identifier",
+
+    "full_name": "schema:name",
+    "email": "schema:email",
+    "phone": "schema:telephone",
+    "date_of_birth": "schema:birthDate",
+    "gender": "schema:gender",
+    "blood_group": "schema:Text",
+
+    "doctor_name": "schema:name",
+    "hospital": "schema:name",
+    "issued_date": "schema:dateIssued",
+    "expiry_date": "schema:validUntil",
+    "is_fit_to_drive": "schema:Boolean",
+    "vision": "schema:Text",
+    "hearing": "schema:Text",
+    "remarks": "schema:Text",
+    "photo_url": "schema:url",
+
+    "written_test": "schema:Text",
+    "practical_test": "schema:Text",
+
+    "selected_categories": "schema:Text",
+    "total_amount": "schema:MonetaryAmount",
+    "payment_reference_id": "schema:identifier",
+    "payment_transaction_id": "schema:identifier",
+    "status": "schema:Text",
+
+    "created_at": "schema:DateTime",
+    "updated_at": "schema:DateTime"
+  }
+}
