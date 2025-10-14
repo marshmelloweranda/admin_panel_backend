@@ -17,8 +17,8 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
-app.use(limiter);
-app.use(express.json({ limit: '10mb' }));
+//app.use(limiter);
+//app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // CORS config
