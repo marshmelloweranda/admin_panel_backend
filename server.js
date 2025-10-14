@@ -15,7 +15,7 @@ const limiter = rateLimit({
 
 // Enhanced CORS configuration
 app.use(cors({
-  origin: ['https://dmt.digieconcenter.gov.lk/admin',https://dmt.digieconcenter.gov.lk, 'http://127.0.0.1:3008', 'http://localhost:3008'],
+  origin: ['https://dmt.digieconcenter.gov.lk/admin','https://dmt.digieconcenter.gov.lk', 'http://127.0.0.1:3008', 'http://localhost:3008'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
