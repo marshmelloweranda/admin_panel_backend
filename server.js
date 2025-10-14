@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const applicationRoutes = require('./Routes/Application');
+const applicationRoutes = require('./Routes/Applications');
 require('dotenv').config();
 
 const app = express();
