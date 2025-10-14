@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/userModel');
 
+express.use('/aapi', router);
+
 // Get all applications with pagination and filtering
 router.get('/', async (req, res, next) => {
   try {
