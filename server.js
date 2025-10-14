@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const applicationRoutes=require('/Routes/Application');
 require('dotenv').config();
 
 const app = express();
@@ -27,13 +28,12 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+ app.use('/applications', applicationRoutes);
+
 // Test route
 app.get('/aapi/test', (req, res) => {
   res.json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
 });
-
-// Routes
-app.use('/aapi/applications', require('./Routes/Applications'));
 
 // Health check
 app.get('/aapi/health', (req, res) => {
