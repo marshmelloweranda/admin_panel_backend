@@ -1,12 +1,17 @@
 const express = require('express');
+const router = express.Router();
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const applicationRoutes=require('/Routes/Application');
 require('dotenv').config();
 
+
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.use('/aapi', router);
+
 
 // Rate limiting
 const limiter = rateLimit({
