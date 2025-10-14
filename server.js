@@ -28,15 +28,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Test route
-app.get('/api/test', (req, res) => {
+app.get('/aapi/test', (req, res) => {
   res.json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
 });
 
 // Routes
-app.use('/api/applications', require('./Routes/Applications'));
+app.use('/aapi/applications', require('./Routes/Applications'));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/aapi/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
