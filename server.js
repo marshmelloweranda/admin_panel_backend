@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const applicationRoutes = require('./Routes/Applications');
+const applicationRoutes = require('./Routes/AppRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -45,7 +45,7 @@ router.get('/health', (req, res) => {
 router.use('/applications', applicationRoutes);
 
 // Mount the router
-app.use('/aapi', router);
+app.use('/admin/aapi', router);
 
 // Error handler
 app.use((err, req, res, next) => {
