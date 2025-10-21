@@ -45,7 +45,7 @@ router.get('/health', (req, res) => {
 router.use('/applications', applicationRoutes);
 
 // Mount the router
-app.use('/admin/aapi', router);
+app.use('/aapi', router);
 
 // Error handler
 app.use((err, req, res, next) => {
