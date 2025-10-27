@@ -4,8 +4,37 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// --- Swagger Imports ---
+const swaggerJSDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// --- Swagger Configuration ---
+const swaggerDefinition = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Application Admin API',
+    version: '1.0.0',
+    description: 'API for managing driving licence applications',
+  },
+  servers: [
+    {
+      url: `http://localhost:${PORT}`,
+      description: 'Development server',
+    },
+  ],
+};
+
+const options = {
+  swaggerDefinition,
+  // Path to the API docs files (your routes)
+  apis: ['./Routes/Applications.js'], 
+};
+
+const swaggerSpec = swaggerJSDoc(options);
+// --- End Swagger Configuration ---
 
 // Rate limiting
 const limiter = rateLimit({
@@ -15,7 +44,7 @@ const limiter = rateLimit({
 
 // Enhanced CORS configuration
 app.use(cors({
-  origin: ['http://dmt.digieconcenter.gov.lk/admin', 'http://127.0.0.1:3008', 'http://localhost:3008'],
+  origin: ['http://dmt.digieconcenter.gov.lk/admin/aapi', 'http://127.0.0.1:3008', 'http://localhost:3008'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -27,13 +56,17 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// --- Serve Swagger Docs ---
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
 });
 
 // Routes
-app.use('/api/applications', require('./Routes/Applications'));
+// Note: Corrected path to include a leading '/'
+app.use('/admin/aapi/applications', require('./Routes/Applications'));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -60,7 +93,8 @@ app.use('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📚 Swagger Docs: http://localhost:${PORT}/api-docs`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 Test endpoint: http://localhost:${PORT}/api/test`);
-  console.log(`📋 Applications API: http://localhost:${PORT}/api/applications`);
+  console.log(`📋 Applications API: http://localhost:${PORT}/admin/aapi/applications`);
 });
