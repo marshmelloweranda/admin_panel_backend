@@ -115,7 +115,7 @@ const User = require('../models/userModel');
 
 /**
  * @swagger
- * /admin/aapi/applications:
+ * /aapi/applications:
  *   get:
  *     summary: Retrieve a list of applications
  *     description: Get all applications with pagination and filtering.
@@ -347,7 +347,7 @@ router.get('/', async (req, res, next) => {
 
 /**
  * @swagger
- * /admin/aapi/applications/stats:
+ * /aapi/applications/stats:
  *   get:
  *     summary: Get application statistics (deprecated)
  *     description: Note - This endpoint seems to be an older version of /stats/summary
@@ -377,7 +377,7 @@ router.get('/stats', async (req, res, next) => {
 
 /**
  * @swagger
- * /admin/aapi/applications/{id}:
+ * /aapi/applications/{id}:
  *   get:
  *     summary: Get a single application by ID
  *     description: Fetches an application by its primary ID, application_id, or medical_certificate_id.
@@ -433,7 +433,7 @@ router.get('/:id', async (req, res, next) => {
 
 /**
  * @swagger
- * /admin/aapi/applications/{id}/status:
+ * /aapi/applications/{id}/status:
  *   patch:
  *     summary: Update an application's status
  *     tags: [Applications]
@@ -513,10 +513,10 @@ router.patch('/:id/status', async (req, res, next) => {
 
 /**
  * @swagger
- * /admin/aapi/applications/{id}:
+ * /aapi/applications/{id}:
  *   put:
  *     summary: Update application details
- *     description: Updates multiple fields of an application. Note - this allows partial updates.
+ *     description: Updates multiple fields of an application with proper data type handling.
  *     tags: [Applications]
  *     parameters:
  *       - $ref: '#/components/parameters/AppIdParam'
@@ -525,7 +525,42 @@ router.patch('/:id/status', async (req, res, next) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Application'
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               date_of_birth:
+ *                 type: string
+ *               gender:
+ *                 type: string
+ *               blood_group:
+ *                 type: string
+ *               doctor_name:
+ *                 type: string
+ *               hospital:
+ *                 type: string
+ *               issued_date:
+ *                 type: string
+ *               expiry_date:
+ *                 type: string
+ *               is_fit_to_drive:
+ *                 type: boolean
+ *               vision:
+ *                 type: string
+ *               hearing:
+ *                 type: string
+ *               remarks:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [pending, submitted, approved, rejected, cancelled]
+ *               admin_status:
+ *                 type: string
+ *                 enum: [unverified, verified, on_hold]
  *     responses:
  *       '200':
  *         description: Application updated successfully
@@ -545,71 +580,194 @@ router.patch('/:id/status', async (req, res, next) => {
  *       '500':
  *         description: Internal server error
  */
-router.put('/:id', async (req, res, next) => {
+router.put('/:sub', async (req, res, next) => {
+  // Create a unique request ID for tracking
+  const requestId = Date.now();
+  
+  console.log(`\n=== PUT REQUEST START [${requestId}] ===`);
+  console.log('URL:', req.originalUrl);
+  console.log('Method:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Content-Type:', req.get('Content-Type'));
+  console.log('Content-Length:', req.get('Content-Length'));
+  
   try {
-    const { id } = req.params;
-    const updateData = req.body;
+    const { sub } = req.params;
+    console.log('Path Parameter (sub):', sub);
 
-    // Build update query dynamically
-    const allowedFields = [
-      'full_name', 'email', 'phone', 'date_of_birth', 'gender', 'blood_group',
-      'doctor_name', 'hospital', 'issued_date', 'expiry_date', 'is_fit_to_drive',
-      'vision', 'hearing', 'remarks', 'photo_url', 'written_test', 'practical_test',
-      'selected_categories', 'total_amount', 'payment_reference_id', 'payment_transaction_id', 'status'
-    ];
+    // Check if body parser is working
+    console.log('Raw req.body:', req.body);
+    console.log('req.body type:', typeof req.body);
+    console.log('req.body keys:', req.body ? Object.keys(req.body) : 'NO BODY');
 
-    const updateFields = [];
-    const values = [];
-    let paramCount = 1;
-
-    allowedFields.forEach(field => {
-      if (updateData[field] !== undefined) {
-        updateFields.push(`${field} = $${paramCount}`);
+    // If body is completely missing or empty object
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log('❌ Body is empty or missing');
+      
+      // Try to read raw body as a fallback
+      let rawBody = '';
+      req.on('data', chunk => {
+        rawBody += chunk.toString();
+      });
+      
+      req.on('end', async () => {
+        console.log('Raw body from stream:', rawBody);
         
-        // Handle JSONB fields
-        if (field === 'written_test' || field === 'practical_test' || field === 'selected_categories') {
-          values.push(updateData[field] ? JSON.stringify(updateData[field]) : null);
+        if (rawBody) {
+          try {
+            const parsedBody = JSON.parse(rawBody);
+            console.log('Parsed from raw body:', parsedBody);
+            
+            // Process with parsed body
+            await processUpdate(id, parsedBody, res);
+          } catch (parseError) {
+            console.error('Failed to parse raw body:', parseError);
+            res.status(400).json({ 
+              error: 'Invalid JSON body',
+              details: parseError.message,
+              rawBody: rawBody.substring(0, 200) // First 200 chars
+            });
+          }
         } else {
-          values.push(updateData[field]);
+          res.status(400).json({ 
+            error: 'Request body is empty or invalid',
+            details: 'No data received in request body. Check if Content-Type: application/json is set.',
+            requestId: requestId,
+            headers: req.headers
+          });
         }
-        
-        paramCount++;
-      }
-    });
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
+      });
+      
+      return;
     }
 
-    updateFields.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id);
-
-    const query = `
-      UPDATE applications 
-      SET ${updateFields.join(', ')}
-      WHERE application_id = $${paramCount} OR id::text = $${paramCount} OR medical_certificate_id = $${paramCount}
-      RETURNING *
-    `;
-
-    const result = await User.executeQuery(query, values, 'Update application');
+    // If we have a body, process normally
+    await processUpdate(sub, req.body, res);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Application not found' });
-    }
-
-    res.json({
-      message: 'Application updated successfully',
-      application: result.rows[0]
-    });
-
   } catch (error) {
+    console.error(`Error in PUT [${requestId}]:`, error);
     next(error);
+  } finally {
+    console.log(`=== PUT REQUEST END [${requestId}] ===\n`);
   }
 });
 
+// Separate function to process the update
+async function processUpdate(sub, updateData, res) {
+  console.log('Processing update with data:', updateData);
+  
+  if (!updateData || Object.keys(updateData).length === 0) {
+    return res.status(400).json({ 
+      error: 'No valid data to update',
+      details: 'Request body exists but contains no updatable fields'
+    });
+  }
+
+  // Define allowed fields
+  const allowedFields = [
+    'full_name', 'email', 'phone', 'date_of_birth', 'gender', 'blood_group',
+    'doctor_name', 'hospital', 'issued_date', 'expiry_date', 'is_fit_to_drive',
+    'vision', 'hearing', 'remarks', 'status', 'admin_status'
+  ];
+
+  const updateFields = [];
+  const values = [];
+  let paramCount = 1;
+
+  console.log('Processing fields from updateData:', updateData);
+
+  // Process each field
+  allowedFields.forEach(field => {
+    if (updateData.hasOwnProperty(field)) {
+      let value = updateData[field];
+      
+      console.log(`Processing field ${field}:`, value, typeof value);
+      
+      // Handle empty strings
+      if (value === '') {
+        value = null;
+      }
+      
+      // Handle date fields
+      if ((field === 'date_of_birth' || field === 'issued_date' || field === 'expiry_date') && value) {
+        try {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            value = date.toISOString().split('T')[0];
+            console.log(`Converted ${field} to:`, value);
+          }
+        } catch (dateError) {
+          console.warn(`Invalid date format for ${field}:`, value);
+          value = null;
+        }
+      }
+      
+      // Handle boolean fields
+      if (field === 'is_fit_to_drive') {
+        value = Boolean(value);
+      }
+
+      updateFields.push(`${field} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+      console.log(`✅ Added field ${field} with value:`, value);
+    }
+  });
+
+  console.log('Final updateFields:', updateFields);
+  console.log('Final values:', values);
+
+  if (updateFields.length === 0) {
+    return res.status(400).json({ 
+      error: 'No valid fields to update',
+      details: 'None of the provided fields matched the allowed fields',
+      receivedFields: Object.keys(updateData),
+      allowedFields: allowedFields
+    });
+  }
+
+  // Add updated_at timestamp
+  updateFields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(sub);
+
+  const query = `
+    UPDATE applications 
+    SET ${updateFields.join(', ')}
+    WHERE sub = $${paramCount} OR id::text = $${paramCount} OR medical_certificate_id = $${paramCount}
+    RETURNING *
+  `;
+
+  console.log('Executing query:', query);
+  console.log('With values:', values);
+
+  const result = await User.executeQuery(query, values, 'Update application');
+  
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'Application not found' });
+  }
+
+  const updatedApplication = result.rows[0];
+  
+  // Parse JSONB fields
+  if (updatedApplication.selected_categories && typeof updatedApplication.selected_categories === 'string') {
+    updatedApplication.selected_categories = JSON.parse(updatedApplication.selected_categories);
+  }
+  if (updatedApplication.written_test && typeof updatedApplication.written_test === 'string') {
+    updatedApplication.written_test = JSON.parse(updatedApplication.written_test);
+  }
+  if (updatedApplication.practical_test && typeof updatedApplication.practical_test === 'string') {
+    updatedApplication.practical_test = JSON.parse(updatedApplication.practical_test);
+  }
+
+  res.json({
+    message: 'Application updated successfully',
+    application: updatedApplication
+  });
+}
+
 /**
  * @swagger
- * /admin/aapi/applications/stats/summary:
+ * /aapi/applications/stats/summary:
  *   get:
  *     summary: Get application statistics summary
  *     description: Returns a count of applications grouped by status.
@@ -667,7 +825,7 @@ router.get('/stats/summary', async (req, res, next) => {
 
 /**
  * @swagger
- * /admin/aapi/applications/user/{sub}:
+ * /aapi/applications/user/{sub}:
  *   get:
  *     summary: Get applications by user 'sub'
  *     description: Retrieves a paginated list of applications for a specific user subject (sub).
@@ -765,7 +923,7 @@ router.get('/user/:sub', async (req, res, next) => {
 
 /**
  * @swagger
- * /admin/aapi/applications/test/data:
+ * /aapi/applications/test/data:
  *   get:
  *     summary: Get sample test data
  *     description: Returns a fixed set of sample application data for testing.

@@ -193,7 +193,7 @@ class User {
         payment_reference_id VARCHAR(100),
         payment_transaction_id VARCHAR(100),
         status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'submitted', 'approved', 'rejected', 'cancelled')),
-        
+        admin_status VARCHAR(20) DEFAULT 'unverified' CHECK (admin_status IN ('unverified', 'verified', 'on_hold')),
         -- Timestamps
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -335,7 +335,8 @@ class User {
       await this.createLicenceCategoriesTable(client);
       await this.createSessionsTable(client);
       await this.createApplicationsTable(client);
-      await this.createMedicalCertificatesTable(client); // Add this line
+      await this.createMedicalCertificatesTable(client); 
+      await this.addAdminStatusField(client); 
       await this.seedLicenceCategories(client);
 
       await client.query('COMMIT');

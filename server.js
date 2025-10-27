@@ -36,25 +36,34 @@ const options = {
 const swaggerSpec = swaggerJSDoc(options);
 // --- End Swagger Configuration ---
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000 // Increased limit for development
-});
-
 // Enhanced CORS configuration
 app.use(cors({
-  origin: ['http://dmt.digieconcenter.gov.lk/admin/aapi', 'http://127.0.0.1:3008', 'http://localhost:3008'],
+  origin: ['http://dmt.digieconcenter.gov.lk/aapi', 'http://127.0.0.1:3008', 'http://localhost:3008'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization','Accept']
 }));
 
+app.use(express.json({ limit: '10mb' })); // Add this line
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // And this line
 // Middleware
 app.use(helmet());
-app.use(limiter);
-app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Test route to check body parsing
+app.post('/test-body', (req, res) => {
+  console.log('Test body endpoint called');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Body type:', typeof req.body);
+  res.json({ 
+    received: true, 
+    body: req.body,
+    bodyType: typeof req.body,
+    headers: req.headers 
+  });
+});
+
 
 // --- Serve Swagger Docs ---
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -66,7 +75,7 @@ app.get('/api/test', (req, res) => {
 
 // Routes
 // Note: Corrected path to include a leading '/'
-app.use('/admin/aapi/applications', require('./Routes/Applications'));
+app.use('/aapi/applications', require('./Routes/Applications'));
 
 // Health check
 app.get('/health', (req, res) => {
