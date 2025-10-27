@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const applicationRoutes = require('./Routes/AppRoutes');
 require('dotenv').config();
 
 // --- Swagger Imports ---
@@ -9,6 +10,7 @@ const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const app = express();
+const router = express.Router();
 const PORT = process.env.PORT || 5000;
 
 // --- Swagger Configuration ---
@@ -36,7 +38,13 @@ const options = {
 const swaggerSpec = swaggerJSDoc(options);
 // --- End Swagger Configuration ---
 
-// Enhanced CORS configuration
+// Middleware
+app.use(helmet());
+//app.use(limiter);
+//app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// CORS config
 app.use(cors({
   origin: ['http://dmt.digieconcenter.gov.lk/aapi', 'http://127.0.0.1:3008', 'http://localhost:3008'],
   credentials: true,
@@ -86,12 +94,17 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Error handling middleware
+router.use('/applications', applicationRoutes);
+
+// Mount the router
+app.use('/aapi', router);
+
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
-    message: err.message 
+    message: err.message
   });
 });
 
@@ -100,6 +113,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📚 Swagger Docs: http://localhost:${PORT}/api-docs`);
