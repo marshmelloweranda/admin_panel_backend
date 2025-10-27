@@ -2,7 +2,178 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/userModel');
 
-// Get all applications with pagination and filtering
+// --- Swagger Definitions (Schemas, Parameters, Tags) ---
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Application:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: The auto-generated id of the application.
+ *         application_id:
+ *           type: string
+ *           description: The unique application identifier.
+ *         medical_certificate_id:
+ *           type: string
+ *           description: The linked medical certificate ID.
+ *         sub:
+ *           type: string
+ *           description: The user's unique subject identifier.
+ *         full_name:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         phone:
+ *           type: string
+ *         date_of_birth:
+ *           type: string
+ *           format: date
+ *         gender:
+ *           type: string
+ *         blood_group:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [pending, submitted, approved, rejected, cancelled]
+ *           description: The current status of the application.
+ *         selected_categories:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               code:
+ *                 type: string
+ *               label:
+ *                 type: string
+ *         written_test:
+ *           type: object
+ *           properties:
+ *             score:
+ *               type: number
+ *             passed:
+ *               type: boolean
+ *         practical_test:
+ *           type: object
+ *           properties:
+ *             score:
+ *               type: number
+ *             passed:
+ *               type: boolean
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *       example:
+ *         id: 1
+ *         application_id: "APP001"
+ *         medical_certificate_id: "MED001"
+ *         sub: "user123"
+ *         full_name: "John Doe"
+ *         email: "john@example.com"
+ *         status: "approved"
+ *         selected_categories: [{ "code": "B", "label": "Car" }]
+ *     Pagination:
+ *       type: object
+ *       properties:
+ *         currentPage:
+ *           type: integer
+ *         totalPages:
+ *           type: integer
+ *         totalCount:
+ *           type: integer
+ *         hasNext:
+ *           type: boolean
+ *         hasPrev:
+ *           type: boolean
+ *   parameters:
+ *     AppIdParam:
+ *       in: path
+ *       name: id
+ *       schema:
+ *         type: string
+ *       required: true
+ *       description: The application ID, primary ID, or medical certificate ID
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Applications
+ *     description: Application management and retrieval
+ *   - name: Test
+ *     description: Test-only endpoints
+ */
+
+// --- End Swagger Definitions ---
+
+/**
+ * @swagger
+ * /aapi/applications:
+ *   get:
+ *     summary: Retrieve a list of applications
+ *     description: Get all applications with pagination and filtering.
+ *     tags: [Applications]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         default: 100
+ *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [all, pending, submitted, approved, rejected, cancelled]
+ *         description: Filter by application status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for application ID, name, email, etc.
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         default: created_at
+ *         description: Column to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *         default: DESC
+ *         description: Sort order
+ *     responses:
+ *       '200':
+ *         description: A list of applications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Application'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       '500':
+ *         description: Internal server error
+ */
 router.get('/', async (req, res, next) => {
   try {
     const { 
@@ -174,7 +345,26 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// --- NEW ENDPOINT FOR APPLICATION STATISTICS ---
+/**
+ * @swagger
+ * /aapi/applications/stats:
+ *   get:
+ *     summary: Get application statistics (deprecated)
+ *     description: Note - This endpoint seems to be an older version of /stats/summary
+ *     tags: [Applications]
+ *     responses:
+ *       '200':
+ *         description: Statistics object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 stats:
+ *                   type: object
+ *       '500':
+ *         description: Internal server error
+ */
 router.get('/stats', async (req, res, next) => {
   try {
     const stats = await User.getApplicationStats();
@@ -185,7 +375,27 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
-// Get application by ID
+/**
+ * @swagger
+ * /aapi/applications/{id}:
+ *   get:
+ *     summary: Get a single application by ID
+ *     description: Fetches an application by its primary ID, application_id, or medical_certificate_id.
+ *     tags: [Applications]
+ *     parameters:
+ *       - $ref: '#/components/parameters/AppIdParam'
+ *     responses:
+ *       '200':
+ *         description: The application object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Application'
+ *       '404':
+ *         description: Application not found
+ *       '500':
+ *         description: Internal server error
+ */
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -221,7 +431,47 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-// Update application status
+/**
+ * @swagger
+ * /aapi/applications/{id}/status:
+ *   patch:
+ *     summary: Update an application's status
+ *     tags: [Applications]
+ *     parameters:
+ *       - $ref: '#/components/parameters/AppIdParam'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, submitted, approved, rejected, cancelled]
+ *             required:
+ *               - status
+ *           example:
+ *             status: "approved"
+ *     responses:
+ *       '200':
+ *         description: Application status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 application:
+ *                   $ref: '#/components/schemas/Application'
+ *       '400':
+ *         description: Invalid or missing status
+ *       '404':
+ *         description: Application not found
+ *       '500':
+ *         description: Internal server error
+ */
 router.patch('/:id/status', async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -261,70 +511,290 @@ router.patch('/:id/status', async (req, res, next) => {
   }
 });
 
-// Update application details
-router.put('/:id', async (req, res, next) => {
+/**
+ * @swagger
+ * /aapi/applications/{id}:
+ *   put:
+ *     summary: Update application details
+ *     description: Updates multiple fields of an application with proper data type handling.
+ *     tags: [Applications]
+ *     parameters:
+ *       - $ref: '#/components/parameters/AppIdParam'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               date_of_birth:
+ *                 type: string
+ *               gender:
+ *                 type: string
+ *               blood_group:
+ *                 type: string
+ *               doctor_name:
+ *                 type: string
+ *               hospital:
+ *                 type: string
+ *               issued_date:
+ *                 type: string
+ *               expiry_date:
+ *                 type: string
+ *               is_fit_to_drive:
+ *                 type: boolean
+ *               vision:
+ *                 type: string
+ *               hearing:
+ *                 type: string
+ *               remarks:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [pending, submitted, approved, rejected, cancelled]
+ *               admin_status:
+ *                 type: string
+ *                 enum: [unverified, verified, on_hold]
+ *     responses:
+ *       '200':
+ *         description: Application updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 application:
+ *                   $ref: '#/components/schemas/Application'
+ *       '400':
+ *         description: No valid fields to update
+ *       '404':
+ *         description: Application not found
+ *       '500':
+ *         description: Internal server error
+ */
+router.put('/:sub', async (req, res, next) => {
+  // Create a unique request ID for tracking
+  const requestId = Date.now();
+  
+  console.log(`\n=== PUT REQUEST START [${requestId}] ===`);
+  console.log('URL:', req.originalUrl);
+  console.log('Method:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Content-Type:', req.get('Content-Type'));
+  console.log('Content-Length:', req.get('Content-Length'));
+  
   try {
-    const { id } = req.params;
-    const updateData = req.body;
+    const { sub } = req.params;
+    console.log('Path Parameter (sub):', sub);
 
-    // Build update query dynamically
-    const allowedFields = [
-      'full_name', 'email', 'phone', 'date_of_birth', 'gender', 'blood_group',
-      'doctor_name', 'hospital', 'issued_date', 'expiry_date', 'is_fit_to_drive',
-      'vision', 'hearing', 'remarks', 'photo_url', 'written_test', 'practical_test',
-      'selected_categories', 'total_amount', 'payment_reference_id', 'payment_transaction_id', 'status'
-    ];
+    // Check if body parser is working
+    console.log('Raw req.body:', req.body);
+    console.log('req.body type:', typeof req.body);
+    console.log('req.body keys:', req.body ? Object.keys(req.body) : 'NO BODY');
 
-    const updateFields = [];
-    const values = [];
-    let paramCount = 1;
-
-    allowedFields.forEach(field => {
-      if (updateData[field] !== undefined) {
-        updateFields.push(`${field} = $${paramCount}`);
+    // If body is completely missing or empty object
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log('❌ Body is empty or missing');
+      
+      // Try to read raw body as a fallback
+      let rawBody = '';
+      req.on('data', chunk => {
+        rawBody += chunk.toString();
+      });
+      
+      req.on('end', async () => {
+        console.log('Raw body from stream:', rawBody);
         
-        // Handle JSONB fields
-        if (field === 'written_test' || field === 'practical_test' || field === 'selected_categories') {
-          values.push(updateData[field] ? JSON.stringify(updateData[field]) : null);
+        if (rawBody) {
+          try {
+            const parsedBody = JSON.parse(rawBody);
+            console.log('Parsed from raw body:', parsedBody);
+            
+            // Process with parsed body
+            await processUpdate(id, parsedBody, res);
+          } catch (parseError) {
+            console.error('Failed to parse raw body:', parseError);
+            res.status(400).json({ 
+              error: 'Invalid JSON body',
+              details: parseError.message,
+              rawBody: rawBody.substring(0, 200) // First 200 chars
+            });
+          }
         } else {
-          values.push(updateData[field]);
+          res.status(400).json({ 
+            error: 'Request body is empty or invalid',
+            details: 'No data received in request body. Check if Content-Type: application/json is set.',
+            requestId: requestId,
+            headers: req.headers
+          });
         }
-        
-        paramCount++;
-      }
-    });
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
+      });
+      
+      return;
     }
 
-    updateFields.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id);
-
-    const query = `
-      UPDATE applications 
-      SET ${updateFields.join(', ')}
-      WHERE application_id = $${paramCount} OR id::text = $${paramCount} OR medical_certificate_id = $${paramCount}
-      RETURNING *
-    `;
-
-    const result = await User.executeQuery(query, values, 'Update application');
+    // If we have a body, process normally
+    await processUpdate(sub, req.body, res);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Application not found' });
-    }
-
-    res.json({
-      message: 'Application updated successfully',
-      application: result.rows[0]
-    });
-
   } catch (error) {
+    console.error(`Error in PUT [${requestId}]:`, error);
     next(error);
+  } finally {
+    console.log(`=== PUT REQUEST END [${requestId}] ===\n`);
   }
 });
 
-// Get application statistics
+// Separate function to process the update
+async function processUpdate(sub, updateData, res) {
+  console.log('Processing update with data:', updateData);
+  
+  if (!updateData || Object.keys(updateData).length === 0) {
+    return res.status(400).json({ 
+      error: 'No valid data to update',
+      details: 'Request body exists but contains no updatable fields'
+    });
+  }
+
+  // Define allowed fields
+  const allowedFields = [
+    'full_name', 'email', 'phone', 'date_of_birth', 'gender', 'blood_group',
+    'doctor_name', 'hospital', 'issued_date', 'expiry_date', 'is_fit_to_drive',
+    'vision', 'hearing', 'remarks', 'status', 'admin_status'
+  ];
+
+  const updateFields = [];
+  const values = [];
+  let paramCount = 1;
+
+  console.log('Processing fields from updateData:', updateData);
+
+  // Process each field
+  allowedFields.forEach(field => {
+    if (updateData.hasOwnProperty(field)) {
+      let value = updateData[field];
+      
+      console.log(`Processing field ${field}:`, value, typeof value);
+      
+      // Handle empty strings
+      if (value === '') {
+        value = null;
+      }
+      
+      // Handle date fields
+      if ((field === 'date_of_birth' || field === 'issued_date' || field === 'expiry_date') && value) {
+        try {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            value = date.toISOString().split('T')[0];
+            console.log(`Converted ${field} to:`, value);
+          }
+        } catch (dateError) {
+          console.warn(`Invalid date format for ${field}:`, value);
+          value = null;
+        }
+      }
+      
+      // Handle boolean fields
+      if (field === 'is_fit_to_drive') {
+        value = Boolean(value);
+      }
+
+      updateFields.push(`${field} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+      console.log(`✅ Added field ${field} with value:`, value);
+    }
+  });
+
+  console.log('Final updateFields:', updateFields);
+  console.log('Final values:', values);
+
+  if (updateFields.length === 0) {
+    return res.status(400).json({ 
+      error: 'No valid fields to update',
+      details: 'None of the provided fields matched the allowed fields',
+      receivedFields: Object.keys(updateData),
+      allowedFields: allowedFields
+    });
+  }
+
+  // Add updated_at timestamp
+  updateFields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(sub);
+
+  const query = `
+    UPDATE applications 
+    SET ${updateFields.join(', ')}
+    WHERE sub = $${paramCount} OR id::text = $${paramCount} OR medical_certificate_id = $${paramCount}
+    RETURNING *
+  `;
+
+  console.log('Executing query:', query);
+  console.log('With values:', values);
+
+  const result = await User.executeQuery(query, values, 'Update application');
+  
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'Application not found' });
+  }
+
+  const updatedApplication = result.rows[0];
+  
+  // Parse JSONB fields
+  if (updatedApplication.selected_categories && typeof updatedApplication.selected_categories === 'string') {
+    updatedApplication.selected_categories = JSON.parse(updatedApplication.selected_categories);
+  }
+  if (updatedApplication.written_test && typeof updatedApplication.written_test === 'string') {
+    updatedApplication.written_test = JSON.parse(updatedApplication.written_test);
+  }
+  if (updatedApplication.practical_test && typeof updatedApplication.practical_test === 'string') {
+    updatedApplication.practical_test = JSON.parse(updatedApplication.practical_test);
+  }
+
+  res.json({
+    message: 'Application updated successfully',
+    application: updatedApplication
+  });
+}
+
+/**
+ * @swagger
+ * /aapi/applications/stats/summary:
+ *   get:
+ *     summary: Get application statistics summary
+ *     description: Returns a count of applications grouped by status.
+ *     tags: [Applications]
+ *     responses:
+ *       '200':
+ *         description: Statistics summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                 byStatus:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: integer
+ *             example:
+ *               total: 150
+ *               byStatus:
+ *                 approved: 50
+ *                 pending: 75
+ *                 rejected: 25
+ *       '500':
+ *         description: Internal server error
+ */
 router.get('/stats/summary', async (req, res, next) => {
   try {
     const query = `
@@ -353,7 +823,49 @@ router.get('/stats/summary', async (req, res, next) => {
   }
 });
 
-// Get applications by user sub
+/**
+ * @swagger
+ * /aapi/applications/user/{sub}:
+ *   get:
+ *     summary: Get applications by user 'sub'
+ *     description: Retrieves a paginated list of applications for a specific user subject (sub).
+ *     tags: [Applications]
+ *     parameters:
+ *       - in: path
+ *         name: sub
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The user's subject identifier
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       '200':
+ *         description: A list of the user's applications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Application'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       '500':
+ *         description: Internal server error
+ */
 router.get('/user/:sub', async (req, res, next) => {
   try {
     const { sub } = req.params;
@@ -409,7 +921,30 @@ router.get('/user/:sub', async (req, res, next) => {
   }
 });
 
-// Simple test endpoint
+/**
+ * @swagger
+ * /aapi/applications/test/data:
+ *   get:
+ *     summary: Get sample test data
+ *     description: Returns a fixed set of sample application data for testing.
+ *     tags: [Test]
+ *     responses:
+ *       '200':
+ *         description: A list of sample applications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Application'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       '500':
+ *         description: Internal server error
+ */
 router.get('/test/data', async (req, res) => {
   try {
     // Return sample data for testing
