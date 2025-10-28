@@ -176,10 +176,10 @@ const User = require('../models/userModel');
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { 
-      page = 1, 
+    const {
+      page = 1,
       limit = 100,
-      status, 
+      status,
       search,
       sortBy = 'created_at',
       sortOrder = 'DESC'
@@ -259,7 +259,7 @@ router.get('/', async (req, res, next) => {
     const validSortColumns = ['created_at', 'updated_at', 'full_name', 'status', 'expiry_date', 'application_id', 'medical_certificate_id'];
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
     const order = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    
+
     query += ` ORDER BY a.${sortColumn} ${order}`;
 
     // Add pagination
@@ -305,7 +305,7 @@ router.get('/', async (req, res, next) => {
       console.log('Falling back to simple applications query');
       const simpleQuery = 'SELECT * FROM applications ORDER BY created_at DESC LIMIT $1 OFFSET $2';
       const simpleCountQuery = 'SELECT COUNT(*) FROM applications';
-      
+
       const [applicationsResult, countResult] = await Promise.all([
         User.executeQuery(simpleQuery, [limit, offset], 'Get applications simple'),
         User.executeQuery(simpleCountQuery, [], 'Count applications simple')
@@ -371,7 +371,7 @@ router.get('/stats', async (req, res, next) => {
     res.json({ stats });
   } catch (error) {
     // Forward error to Express error handler
-    next(error); 
+    next(error);
   }
 });
 
@@ -399,7 +399,7 @@ router.get('/stats', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Find by application_id, id, or medical_certificate_id
     const query = `
       SELECT *
@@ -409,7 +409,7 @@ router.get('/:id', async (req, res, next) => {
     `;
     const result = await User.executeQuery(query, [id], 'Find application by ID, application_id, or medical_certificate_id');
     const application = result.rows[0];
-    
+
     if (!application) {
       return res.status(404).json({ error: 'Application not found' });
     }
@@ -495,13 +495,13 @@ router.patch('/:id/status', async (req, res, next) => {
     `;
 
     const result = await User.executeQuery(query, [status, id], 'Update application status');
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Application not found' });
     }
 
     const updatedApplication = result.rows[0];
-    
+
     res.json({
       message: 'Application status updated successfully',
       application: updatedApplication
@@ -513,7 +513,7 @@ router.patch('/:id/status', async (req, res, next) => {
 
 /**
  * @swagger
- * /aapi/applications/{id}:
+ * /aapi/applications/{sub}:
  *   put:
  *     summary: Update application details
  *     description: Updates multiple fields of an application with proper data type handling.
@@ -583,14 +583,14 @@ router.patch('/:id/status', async (req, res, next) => {
 router.put('/:sub', async (req, res, next) => {
   // Create a unique request ID for tracking
   const requestId = Date.now();
-  
+
   console.log(`\n=== PUT REQUEST START [${requestId}] ===`);
   console.log('URL:', req.originalUrl);
   console.log('Method:', req.method);
   console.log('Headers:', req.headers);
   console.log('Content-Type:', req.get('Content-Type'));
   console.log('Content-Length:', req.get('Content-Length'));
-  
+
   try {
     const { sub } = req.params;
     console.log('Path Parameter (sub):', sub);
@@ -603,33 +603,33 @@ router.put('/:sub', async (req, res, next) => {
     // If body is completely missing or empty object
     if (!req.body || Object.keys(req.body).length === 0) {
       console.log('❌ Body is empty or missing');
-      
+
       // Try to read raw body as a fallback
       let rawBody = '';
       req.on('data', chunk => {
         rawBody += chunk.toString();
       });
-      
+
       req.on('end', async () => {
         console.log('Raw body from stream:', rawBody);
-        
+
         if (rawBody) {
           try {
             const parsedBody = JSON.parse(rawBody);
             console.log('Parsed from raw body:', parsedBody);
-            
+
             // Process with parsed body
-            await processUpdate(id, parsedBody, res);
+            await processUpdate(sub, parsedBody, res);
           } catch (parseError) {
             console.error('Failed to parse raw body:', parseError);
-            res.status(400).json({ 
+            res.status(400).json({
               error: 'Invalid JSON body',
               details: parseError.message,
               rawBody: rawBody.substring(0, 200) // First 200 chars
             });
           }
         } else {
-          res.status(400).json({ 
+          res.status(400).json({
             error: 'Request body is empty or invalid',
             details: 'No data received in request body. Check if Content-Type: application/json is set.',
             requestId: requestId,
@@ -637,13 +637,13 @@ router.put('/:sub', async (req, res, next) => {
           });
         }
       });
-      
+
       return;
     }
 
     // If we have a body, process normally
     await processUpdate(sub, req.body, res);
-    
+
   } catch (error) {
     console.error(`Error in PUT [${requestId}]:`, error);
     next(error);
@@ -655,9 +655,9 @@ router.put('/:sub', async (req, res, next) => {
 // Separate function to process the update
 async function processUpdate(sub, updateData, res) {
   console.log('Processing update with data:', updateData);
-  
+
   if (!updateData || Object.keys(updateData).length === 0) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'No valid data to update',
       details: 'Request body exists but contains no updatable fields'
     });
@@ -680,14 +680,14 @@ async function processUpdate(sub, updateData, res) {
   allowedFields.forEach(field => {
     if (updateData.hasOwnProperty(field)) {
       let value = updateData[field];
-      
+
       console.log(`Processing field ${field}:`, value, typeof value);
-      
+
       // Handle empty strings
       if (value === '') {
         value = null;
       }
-      
+
       // Handle date fields
       if ((field === 'date_of_birth' || field === 'issued_date' || field === 'expiry_date') && value) {
         try {
@@ -701,7 +701,7 @@ async function processUpdate(sub, updateData, res) {
           value = null;
         }
       }
-      
+
       // Handle boolean fields
       if (field === 'is_fit_to_drive') {
         value = Boolean(value);
@@ -718,7 +718,7 @@ async function processUpdate(sub, updateData, res) {
   console.log('Final values:', values);
 
   if (updateFields.length === 0) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'No valid fields to update',
       details: 'None of the provided fields matched the allowed fields',
       receivedFields: Object.keys(updateData),
@@ -741,13 +741,13 @@ async function processUpdate(sub, updateData, res) {
   console.log('With values:', values);
 
   const result = await User.executeQuery(query, values, 'Update application');
-  
+
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Application not found' });
   }
 
   const updatedApplication = result.rows[0];
-  
+
   // Parse JSONB fields
   if (updatedApplication.selected_categories && typeof updatedApplication.selected_categories === 'string') {
     updatedApplication.selected_categories = JSON.parse(updatedApplication.selected_categories);
@@ -870,7 +870,7 @@ router.get('/user/:sub', async (req, res, next) => {
   try {
     const { sub } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    
+
     const offset = (page - 1) * limit;
 
     const query = `
@@ -1010,7 +1010,7 @@ router.get('/test/data', async (req, res) => {
         updated_at: new Date().toISOString()
       }
     ];
-    
+
     res.json({
       applications: sampleData,
       pagination: {
