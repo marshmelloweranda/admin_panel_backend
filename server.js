@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const applicationRoutes = require('./Routes/AppRoutes');
+const appRoutes = require('./Routes/AppRoutes');
 require('dotenv').config();
 
 // --- Swagger Imports ---
@@ -32,7 +32,7 @@ const swaggerDefinition = {
 const options = {
   swaggerDefinition,
   // Path to the API docs files (your routes)
-  apis: ['./Routes/Applications.js'], 
+  apis: ['./Routes/AppRoutes.js'], 
 };
 
 const swaggerSpec = swaggerJSDoc(options);
@@ -83,7 +83,7 @@ app.get('/api/test', (req, res) => {
 
 // Routes
 // Note: Corrected path to include a leading '/'
-app.use('/aapi/applications', require('./Routes/Applications'));
+app.use('/aapi/applications', require('./Routes/AppRoutes'));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -94,7 +94,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-router.use('/applications', applicationRoutes);
+router.use('/applications', appRoutes);
 
 // Mount the router
 app.use('/aapi', router);
