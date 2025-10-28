@@ -46,14 +46,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS config
 app.use(cors({
-  origin: ['http://dmt.digieconcenter.gov.lk/aapi', 'http://127.0.0.1:3008', 'http://localhost:3008'],
+  origin: ['https://dmt.digieconcenter.gov.lk/aapi', 'http://127.0.0.1:3008', 'http://localhost:3008'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization','Accept']
 }));
 
-app.use(express.json({ limit: '10mb' })); // Add this line
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // And this line
+// app.use(express.json({ limit: '10mb' })); // Add this line
+// app.use(express.urlencoded({ extended: true, limit: '10mb' })); // And this line
 // Middleware
 app.use(helmet());
 app.use(express.urlencoded({ extended: true }));
